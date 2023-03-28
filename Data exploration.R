@@ -1,5 +1,6 @@
 library(tidyverse)
 library(lubridate)
+library(forecast)
 
 setwd("C:/Users/kiers/OneDrive/Documents/GitHub/Forecasting-Challenge-2")
 
@@ -45,3 +46,17 @@ panel.hist <- function(x, ...)
 }
 
 pairs(data[,2:7], diag.panel = panel.hist)
+
+
+# Make some lag plots
+tmin_ts <- ts(data$tmin, start = c(1935, 1), end = c(2018, 1), frequency = 12)
+tmean_ts <- ts(data$tmean, start = c(1935, 1), end = c(2018, 1), frequency = 12)
+ppt_ts <- ts(data$ppt, start = c(1935, 1), end = c(2018, 1), frequency = 12)
+
+lag.plot(tmin_ts, lags = 12, do.lines = F)
+lag.plot(tmean_ts, lags = 12, do.lines = F)
+lag.plot(ppt_ts, lags = 12, do.lines = F)
+
+tsdisplay(tmin_ts)
+tsdisplay(tmean_ts)
+tsdisplay(ppt_ts)
