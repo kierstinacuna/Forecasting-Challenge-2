@@ -60,3 +60,16 @@ lag.plot(ppt_ts, lags = 12, do.lines = F)
 tsdisplay(tmin_ts)
 tsdisplay(tmean_ts)
 tsdisplay(ppt_ts)
+
+# Precip accumulation from the previous winter and fall is probably important for 
+#   spring growth, unclear how far into the fall precip is important though
+# Make two additional variables, one representing previous winter precip, and one 
+#   representing previous winter and fall precip
+# For each years previous winter precip, I want the current year's January precip,
+#   and the previous year's December preicp
+
+winterppt <- data %>% 
+  mutate(winterYear = ifelse(Month == 1, Year-1, Year)) %>% 
+  filter(Month == c(1,12))
+  group_by(winterYear) %>% 
+  summarise(winterppt = sum(ppt[which(Month == c(1,12))]))
