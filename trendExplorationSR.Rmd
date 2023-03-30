@@ -1,0 +1,95 @@
+---
+title: "Untitled"
+author: "Seth Romero"
+date: "2023-03-28"
+output: html_document
+---
+
+```{r, include = FALSE}
+options(width = 200)
+knitr::opts_chunk$set(include = FALSE, echo = FALSE, message = FALSE, warning = FALSE, fig.height = 13, fig.width = 10, results = "hide")
+```
+
+```{r}
+library(rstan)
+library(shinystan)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(ggplot2)
+library(patchwork)
+library(kableExtra)
+library(forcats)
+
+setwd("~/Documents/GitHub/CourseResources/EcologicalForecasting/challenge1/")
+
+weather <- read.csv("../data/weather data - PRISM_ppt_tmin_tmean_stable_4km_193501_201801_37.1019_-119.7324.csv") %>%
+  mutate(date = ymd(paste(as.character(Date), "-01", sep = ""))) %>%
+  rename(month = Date,
+         pptIn = ppt..inches.,
+         tmin = tmin..degrees.F.,
+         tmean = tmean..degrees.F.)
+
+forage <- read.csv("../data/Forage Data - Sheet1.csv") %>%
+  mutate(date = mdy(paste("05-01-", as.character(year), sep = "")),
+         month = paste(as.character(year), "-05", sep = ""))
+
+combined <- weather %>%
+  left_join(forage, by = "month") %>%
+  select(-date.x, -date.y) %>%
+  mutate(date = ymd(paste(month, "-01", sep = "")),
+         month = month(date),
+         year = year(date),
+         winterYear = ifelse(month == 1, year-1, year),
+         winterMonth = ifelse(month == 1, 6, month-7))
+
+combinedCut <- combined %>%
+  filter(winterMonth > 0) %>%
+  select(pptIn, tmin, tmean, year, winterMonth, winterYear) %>%
+  mutate(year = winterYear + 1,
+         precipScaled = pptIn * 5) %>%
+  left_join(forage, by = "year") %>%
+  select(-date, -month, -pptIn) %>%
+  mutate(percentile = cume_dist(lbs_per_acre)) %>%
+  arrange(year, winterMonth) %>%
+  na.omit() %>%
+  group_by(year) %>%
+  mutate(rainTotal = cumsum(precipScaled),
+         minAvg = cumsum(tmin) / winterMonth,
+         meanAvg = cumsum(tmean) / winterMonth) %>%
+  group_by() %>%
+  relocate(year, winterYear, winterMonth, percentile, lbs_per_acre) %>%
+  pivot_longer(cols = c(colnames(.[6:ncol(.)])),
+               names_to = "variable",
+               values_to = "data") %>%
+  mutate(rank = as.integer(round(percentile / 0.0133, digits = 0)),
+         year = fct_reorder(factor(year), rank))
+```
+
+```{r}
+yearTrends <- ggplot(combinedCut, aes(x = winterMonth, y = data, color = variable)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~year, ncol = 10) +
+  theme_bw()
+
+```
+
+<style>
+  .superbigimage{
+      overflow-x:scroll;
+      overflow-y:scroll;
+      white-space: nowrap;
+  }
+
+  .superbigimage img{
+     max-width: none;
+     max-height: none;
+  }
+</style>
+
+<div class="superbigimage">
+```{r plot_it, include = TRUE, echo = FALSE, fig.width=25, fig.height=20}
+yearTrends
+```
+</div>
