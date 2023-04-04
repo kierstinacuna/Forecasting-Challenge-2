@@ -1,3 +1,5 @@
+# Get set up ----
+
 library(tidyverse)
 library(lubridate)
 library(forecast)
@@ -48,7 +50,7 @@ panel.hist <- function(x, ...)
 pairs(data[,2:7], diag.panel = panel.hist)
 
 
-# Make some lag plots
+# Make some lag plots ----
 tmin_ts <- ts(data$tmin, start = c(1935, 1), end = c(2018, 1), frequency = 12)
 tmean_ts <- ts(data$tmean, start = c(1935, 1), end = c(2018, 1), frequency = 12)
 ppt_ts <- ts(data$ppt, start = c(1935, 1), end = c(2018, 1), frequency = 12)
@@ -61,6 +63,7 @@ tsdisplay(tmin_ts)
 tsdisplay(tmean_ts)
 tsdisplay(ppt_ts)
 
+# Make more vars ----
 # Precip accumulation from the previous winter and fall is probably important for 
 #   spring growth, unclear how far into the fall precip is important though
 # Make two additional variables, one representing previous winter precip, and one 
@@ -71,14 +74,45 @@ tsdisplay(ppt_ts)
 # Corina made some great aggregated variables! Jan temps are previous year Jan temps though
 
 combined <- read.csv("aggregated variables.csv")
+combined <- combined %>% 
+  rename(Year = year) %>% 
+  select(!X)
 
 
 # Summer temps and precip might also impact forage because it would impact seed set
 #   We would expect more viable seeds in cooler, wetter summers
 
-summerppt <- data %>% 
+summervars <- data %>% 
   filter(Month %in% c(6, 7, 8, 9)) %>% 
   group_by(Year) %>% 
-  summarise(ppt_summer = sum(ppt))
+  summarise(ppt_summer = sum(ppt),
+            tmean_summer = mean(tmean),
+            tmin_summer = min(tmin))
 
-summertmean <- data %>% 
+augustvars <- data %>% 
+  filter(Month == 8) %>% 
+  group_by(Year) %>% 
+  summarise(tmean_aug = mean(tmean),
+            tmin_aug = min(tmin))
+
+combined <- merge(combined, summervars, by="Year", all.x = T)
+combined <- merge(combined, augustvars, by="Year", all.x = T)
+
+write.csv(combined, "aggregated variables.csv")
+
+# Make some models ----
+model1 <- lm(lbs_per_acre ~ ppt_summer + tmean_summer, data = combined)
+model2 <- lm(lbs_per_acre ~ ppt_summer + tmin_summer, data = combined) 
+model3 <- lm(lbs_per_acre ~ ppt_summer + tmean_aug, data = combined)
+model4 <- lm(lbs_per_acre ~ ppt_summer + tmin_aug, data = combined)
+
+AIC(model1, model2, model3, model4)
+# model 2 has lowest AIC
+
+# Try adding winter ppt in
+model5 <- lm(lbs_per_acre ~ ppt_summer + tmin_summer + ppt_winter, data = combined)
+model6 <- lm(lbs_per_acre ~ tmin_summer + ppt_winter, data = combined)
+model7 <- lm(lbs_per_acre ~ ppt_summer + ppt_winter, data = combined)
+
+AIC(model2, model5, model6, model7)
+# 
