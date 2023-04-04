@@ -5,10 +5,24 @@ date: "2023-03-28"
 output: html_document
 ---
 
+```{css, echo=FALSE}
+body .main-container {
+  max-width: 1200px !important;
+  width: 1200px !important;
+}
+body {
+  max-width: 1200px !important;
+  margin-right: auto;
+  margin-left: auto;
+}
+```
+
 ```{r, include = FALSE}
 options(width = 200)
-knitr::opts_chunk$set(include = FALSE, echo = FALSE, message = FALSE, warning = FALSE, fig.height = 13, fig.width = 10, results = "hide")
+knitr::opts_chunk$set(include = FALSE, echo = FALSE, message = FALSE, warning = FALSE, fig.height = 5, fig.width = 5, fig.align = "center", results = "hide")
 ```
+
+
 
 ```{r}
 library(rstan)
@@ -20,6 +34,7 @@ library(ggplot2)
 library(patchwork)
 library(kableExtra)
 library(forcats)
+library(MetBrewer)
 
 setwd("~/Documents/GitHub/CourseResources/EcologicalForecasting/challenge1/")
 
@@ -33,7 +48,16 @@ weather <- read.csv("../data/weather data - PRISM_ppt_tmin_tmean_stable_4km_1935
 forage <- read.csv("../data/Forage Data - Sheet1.csv") %>%
   mutate(date = mdy(paste("05-01-", as.character(year), sep = "")),
          month = paste(as.character(year), "-05", sep = ""))
-
+winterPeriods <- function(inputData, winterLength){
+  outDF <- inputData %>%
+    left_join(forage, by = "month") %>%
+    select(-date.x, -date.y) %>%
+    mutate(date = ymd(paste(month, "-01", sep = "")),
+           month = month(date),
+           year = year(date),
+           winterYear = ifelse(month == 1, year-1, year),
+           winterMonth = ifelse(month == 1, winterLength, month-(13-winterLength)))
+}
 combined <- weather %>%
   left_join(forage, by = "month") %>%
   select(-date.x, -date.y) %>%
@@ -41,7 +65,7 @@ combined <- weather %>%
          month = month(date),
          year = year(date),
          winterYear = ifelse(month == 1, year-1, year),
-         winterMonth = ifelse(month == 1, 6, month-7))
+         winterMonth = ifelse(month == 1, 12, month-1))
 
 combinedCut <- combined %>%
   filter(winterMonth > 0) %>%
@@ -67,18 +91,23 @@ combinedCut <- combined %>%
 ```
 
 ```{r}
+vec <- vector(length = 7)
+vec[1:6] <- met.brewer("Juarez", n = 6)
+vec[7] <- met.brewer("Kandinsky", n = 1)
+
 yearTrends <- ggplot(combinedCut, aes(x = winterMonth, y = data, color = variable)) +
   geom_line() +
   geom_point() +
+  scale_color_brewer(palette = "Dark2") +
   facet_wrap(~year, ncol = 10) +
-  theme_bw()
+  theme_bw() +
+  theme(legend.position = "left")
 
 ```
 
 <style>
   .superbigimage{
       overflow-x:scroll;
-      overflow-y:scroll;
       white-space: nowrap;
   }
 
@@ -89,7 +118,39 @@ yearTrends <- ggplot(combinedCut, aes(x = winterMonth, y = data, color = variabl
 </style>
 
 <div class="superbigimage">
-```{r plot_it, include = TRUE, echo = FALSE, fig.width=25, fig.height=20}
+```{r plot_it, include = TRUE, echo = FALSE, fig.width=16, fig.height=12}
 yearTrends
 ```
 </div>
+
+
+```{r, include = TRUE, fig.width=7}
+jan <- combinedCut %>%
+  mutate(variable2 = paste(variable, winterMonth, sep = "_")) %>%
+  select(-variable, -winterMonth) %>%
+  pivot_wider(names_from = "variable2", values_from = "data") %>%
+  mutate(fOutlier = (lbs_per_acre - mean(lbs_per_acre)) / sd(lbs_per_acre),
+         rOutlier = (rainTotal_6 - mean(rainTotal_6)) / sd(rainTotal_6),
+         bad = as.integer(ifelse(fOutlier > 2 | rOutlier > 2, 1, 0)))
+
+ggplot(jan, aes(x = rainTotal_6, y = lbs_per_acre, color = lag(lbs_per_acre, n = 1))) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "#635548", se = FALSE) +
+  scale_color_gradientn(colors = rev(met.brewer("Hiroshige"))) +
+  theme_bw()
+
+```
+
+```{r, include=TRUE, fig.width=16, fig.height=10}
+ggplot((combinedCut %>%
+          filter(variable %in% c("tmin", "precipScaled"))), 
+       aes(x = winterMonth, y = data, group = year, color = rank)) +
+  geom_line(alpha = 0.5) +
+  scale_color_gradientn(colors = met.brewer("Hiroshige")) +
+  facet_wrap(~variable, ncol = 3) +
+  theme_bw() +
+  theme(legend.position = "left")
+         
+```
+
+
