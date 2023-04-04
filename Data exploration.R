@@ -68,8 +68,17 @@ tsdisplay(ppt_ts)
 # For each years previous winter precip, I want the current year's January precip,
 #   and the previous year's December preicp
 
-winterppt <- data %>% 
-  mutate(winterYear = ifelse(Month == 1, Year-1, Year)) %>% 
-  filter(Month == c(1,12))
-  group_by(winterYear) %>% 
-  summarise(winterppt = sum(ppt[which(Month == c(1,12))]))
+# Corina made some great aggregated variables! Jan temps are previous year Jan temps though
+
+combined <- read.csv("aggregated variables.csv")
+
+
+# Summer temps and precip might also impact forage because it would impact seed set
+#   We would expect more viable seeds in cooler, wetter summers
+
+summerppt <- data %>% 
+  filter(Month %in% c(6, 7, 8, 9)) %>% 
+  group_by(Year) %>% 
+  summarise(ppt_summer = sum(ppt))
+
+summertmean <- data %>% 
