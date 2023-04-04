@@ -80,6 +80,8 @@ names(all_data)[5] <- "tmean_winter"
 names(all_data)[6] <- "tmin_jan"
 names(all_data)[7] <- "tmean_jan"
 
+# write.csv(all_data, file = "aggregated variables.csv")
+
 #withhold 20% of data to train the model 
 n<-length(all_data$lbs_per_acre) 
 datafit<-all_data[1:(n-15),] #This is our "observed" data; remove last 15 obs 
