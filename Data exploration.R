@@ -106,21 +106,23 @@ tsdisplay(ppt_ts)
 monthcols <- read.csv("month columns.csv")
 
 # Add aggregated vars to this new dataframe
-test <- monthcols %>% 
-  mutate(ppt_winter = sum(pptIn_12, pptIn_11, pptIn_10, pptIn_9),
-         tmin_winter = min(tmin_12, tmin_11, tmin_10, tmin_9),
-         tmean_winter = mean(tmin_12, tmin_11, tmin_10, tmin_9),
+combined <- monthcols %>% 
+  mutate(ppt_winter = pptIn_12 + pptIn_11 + pptIn_10 + pptIn_9,
+         tmin_winter = pmin(tmin_12, tmin_11, tmin_10, tmin_9),
+         tmean_winter = (tmin_12 + tmin_11 + tmin_10 + tmin_9)/4,
          tmin_jan = tmin_12,
          tmean_jan = tmean_12,
-         ppt_summer = sum(pptIn_5, pptIn_6, pptIn_7, pptIn_8),
-         tmin_summer = min(pptIn_5, pptIn_6, pptIn_7, pptIn_8),
-         tmean_summer = mean(pptIn_5, pptIn_6, pptIn_7, pptIn_8),
+         ppt_summer = pptIn_5 + pptIn_6 + pptIn_7 + pptIn_8,
+         tmin_summer = pmin(pptIn_5, pptIn_6, pptIn_7, pptIn_8),
+         tmean_summer = (pptIn_5 + pptIn_6 + pptIn_7 + pptIn_8)/4,
          tmin_aug = tmin_7,
          tmean_aug = tmean_7) %>% 
   select(c(year, winterYear, lbs_per_acre, percentile, ppt_winter, tmin_winter, tmean_winter,
-           tmin_jan, tmean_jan, ppt_summer, tmin_summer, tmean_summer, tmin_aug, tmean_aug))
+           tmin_jan, tmean_jan, ppt_summer, tmin_summer, tmean_summer, tmin_aug, tmean_aug)) %>% 
+  filter(year != 1935) %>% 
+  filter(year < 2011)
 
-
+write.csv(combined, "aggregated variables.csv")
 
 # Make some models ----
 model1 <- lm(lbs_per_acre ~ ppt_summer + tmean_summer, data = combined)
@@ -137,4 +139,4 @@ model6 <- lm(lbs_per_acre ~ tmin_summer + ppt_winter, data = combined)
 model7 <- lm(lbs_per_acre ~ ppt_summer + ppt_winter, data = combined)
 
 AIC(model2, model5, model6, model7)
-# 
+# Models 6 and 7 have the lowest AIC
