@@ -4,14 +4,15 @@ library(lubridate)
 
 setwd("~/Documents/GitHub/CourseResources/EcologicalForecasting/challenge1/")
 
-weather <- read.csv("Weather data.csv") %>%
+
+weather <- read.csv("../data/weather data - PRISM_ppt_tmin_tmean_stable_4km_193501_201801_37.1019_-119.7324.csv") %>%
   mutate(date = ymd(paste(as.character(Date), "-01", sep = ""))) %>%
   rename(month = Date,
          pptIn = ppt..inches.,
          tmin = tmin..degrees.F.,
          tmean = tmean..degrees.F.)
 
-forage <- read.csv("Forage Data.csv") %>%
+forage <- read.csv("../data/Forage Data - Sheet1.csv") %>%
   mutate(date = mdy(paste("05-01-", as.character(year), sep = "")),
          month = paste(as.character(year), "-05", sep = ""))
 
@@ -33,6 +34,7 @@ modelIn <- weather %>%
                values_to = "data") %>%
   mutate(label = paste(variable, winterMonth, sep = "_")) %>%
   select(-variable, -winterMonth) %>%
+
   pivot_wider(names_from = "label", values_from = "data")
 
 write.csv(modelIn, "month columns.csv")
