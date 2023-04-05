@@ -140,3 +140,24 @@ model7 <- lm(lbs_per_acre ~ ppt_summer + ppt_winter, data = combined)
 
 AIC(model2, model5, model6, model7)
 # Models 6 and 7 have the lowest AIC
+
+par(mfrow = c(2,2))
+plot(model6)
+plot(model7)
+# Model6 residuals look really bad, model7 looks slightly less bad, so I'll go with that one!
+
+# Make some forecasts ----
+predictdata <- monthcols %>% 
+  mutate(ppt_winter = pptIn_12 + pptIn_11 + pptIn_10 + pptIn_9,
+         tmin_winter = pmin(tmin_12, tmin_11, tmin_10, tmin_9),
+         tmean_winter = (tmin_12 + tmin_11 + tmin_10 + tmin_9)/4,
+         tmin_jan = tmin_12,
+         tmean_jan = tmean_12,
+         ppt_summer = pptIn_5 + pptIn_6 + pptIn_7 + pptIn_8,
+         tmin_summer = pmin(pptIn_5, pptIn_6, pptIn_7, pptIn_8),
+         tmean_summer = (pptIn_5 + pptIn_6 + pptIn_7 + pptIn_8)/4,
+         tmin_aug = tmin_7,
+         tmean_aug = tmean_7) %>% 
+  select(c(year, winterYear, lbs_per_acre, percentile, ppt_winter, tmin_winter, tmean_winter,
+           tmin_jan, tmean_jan, ppt_summer, tmin_summer, tmean_summer, tmin_aug, tmean_aug))
+
